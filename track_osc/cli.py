@@ -5,6 +5,7 @@ import cv2
 from ultralytics import YOLO
 import logging  # Import the logging module
 from pythonosc import udp_client
+import time
 
 #def process_file(file, number, verbose):
 def process_file():
@@ -24,16 +25,22 @@ def process_file():
     port = 8000  # The port the OSC server is listening on
     client = udp_client.SimpleUDPClient(ip_address, port)
 
+    #client.send_message("/object/created", [0, 0.1, 1.0])
+    #time.sleep(1)
+    #client.send_message("/object/movement", [0, 0.7,0.6])
+    #time.sleep(1)
+    #client.send_message("/object/deleted", [0])
+    processVideo(client)
+
+def processVideo(client):
     # Suppress YOLOv8 info-level logs by setting the logging level to WARNING
     logging.getLogger("ultralytics").setLevel(logging.WARNING)
 
-    # Load the YOLOv8 model
+    # Load the YOLOv11 model
     # This will download the model from the internet
     model = YOLO("yolo11n.pt")
 
-    # Open the video file
-    #video_path = "path/to/video.mp4"
-    #cap = cv2.VideoCapture(video_path)
+    # Start the camera capture
     cap = cv2.VideoCapture(0)
 
     previous_object_ids = set()
@@ -44,66 +51,80 @@ def process_file():
         success, frame = cap.read()
 
         if success:
-
             # Get the frame dimensions
             frame_height, frame_width = frame.shape[:2]
 
-            # Run YOLOv8 tracking on the frame, persisting tracks between frames
+            # Run YOLOv11 tracking on the frame, persisting tracks between frames
             # documentation: https://docs.ultralytics.com/modes/predict/#inference-arguments
-            results = model.track(frame, persist=True)
+            # conf - Sets the minimum confidence threshold for detections.
+            # https://docs.ultralytics.com/reference/engine/model/#ultralytics.engine.model.Model.track
+            results = model.track(frame, persist=True, conf=0.5, tracker="bytetrack.yaml")
 
-            if results[0].boxes.id is None:
-                print("we have results")
+            #Results is a list which would correspond to multiple frames, if multiple frames were passed to track
+            #In this case it will have only one element
+            if results[0].boxes.id is not None:
                 # results might give results for multiple frames, we only have one so it is in index 0
                 # Get the bounding box coordinates (x1, y1, x2, y2)
                 boxes_xyxy = results[0].boxes.xyxy.cpu().numpy().tolist()
                 boxes_ids =  results[0].boxes.id.cpu().numpy().tolist() #results[0].boxes.id.cpu().numpy().tolist() if results[0].boxes.id is not None else [] 
 
-                # Loop through each box to compute and send the normalized center
-                for box, id in zip(boxes_xyxy, boxes_ids):
-                    x1, y1, x2, y2 = box  # Unpack box coordinates
-                    center_x = (x1 + x2) / 2
-                    center_y = (y1 + y2) / 2
-
-                    # Normalize the center coordinates
-                    norm_center_x = center_x / frame_width
-                    norm_center_y = center_y / frame_height
-
-                #client.send_message("/object/movement", [norm_center_x, norm_center_y])
-
                 # Get the current object IDs from the results
-                current_object_ids = set(results[0].boxes.id.cpu().numpy().tolist())
-
-                # Find new objects that appeared
+                current_object_ids = set(boxes_ids)
+                 # Find new objects that appeared
                 new_objects = current_object_ids - previous_object_ids
-                #if new_objects:
-                #    print(f"New objects appeared: {new_objects}")
-
                 # Find objects that disappeared
                 disappeared_objects = previous_object_ids - current_object_ids
+
+                if len(boxes_ids) != len(boxes_xyxy):
+                    print("len(boxes_ids) != len(boxes_xyxy): {len(boxes_ids)} {len(boxes_xyxy)}")
+
+                def getCenter(box):
+                    x1, y1, x2, y2 = box
+                    center_x = (x1 + x2) / 2
+                    center_y = (y1 + y2) / 2
+                    return (center_x / frame_width, center_y / frame_height)
+                
+                centerPositions = map(getCenter, boxes_xyxy)
+                
+                 #if new_objects:
+                #    print(f"New objects appeared: {new_objects}")
                 #if disappeared_objects:
                 #    print(f"Objects disappeared: {disappeared_objects}")
 
-                for id in new_objects:
-                    client.send_message("/object/created", int(id))
+                #new_objects is subset of current_object_ids so can test here
+                for center, id in zip(centerPositions, boxes_ids):
+                    x,y = center
+                    if id in new_objects:
+                        client.send_message("/object/created", [int(id), float(x), float(y)])
+                        print(f"/object/created {[int(id), float(x), float(y)]}")
+                    else:
+                        client.send_message("/object/movement", [int(id), float(x), float(y)])
+                        #print(f"Object moving: { [id, x, y]}")
 
                 for id in disappeared_objects:
                     client.send_message("/object/deleted", int(id))
-
-                # Update the previous_object_ids with the current IDs for the next iteration
-                
+                    print(f"/object/deleted { [id]}")
             else:
-                print("no objects on this frame")
+                #No objects were detected in this frame therefore we will send message asking them to be deleted.
+                #print("no objects on this frame")
                 current_object_ids = set()
+                #if previous_object_ids:
+                #    print(f"Objects disappeared: {disappeared_objects}")
+                for id in previous_object_ids:
+                    client.send_message("/object/deleted", int(id))
+                    print(f"/object/deleted (no objects this frame) { [id]}")
+            
+            if previous_object_ids != current_object_ids:
+                print(f"Objects have changed: {current_object_ids}")
 
+            #Set the current objects to the previous objects variable for comparison in the next iteration
             previous_object_ids = current_object_ids
-            print(f"current_object_ids: {current_object_ids}")
 
             # Visualize the results on the frame
             annotated_frame = results[0].plot()
 
             # Display the annotated frame
-            cv2.imshow("YOLOv8 Tracking", annotated_frame)
+            cv2.imshow("YOLOv11 Tracking", annotated_frame)
 
             # Break the loop if 'q' is pressed
             if cv2.waitKey(1) & 0xFF == ord("q"):

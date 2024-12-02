@@ -1,0 +1,5 @@
+track_osc/__pycache__
+.venv
+dist
+build
+*.pt

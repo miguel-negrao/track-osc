@@ -4,5 +4,7 @@ def main():
     subprocess.run([
         "pyinstaller",
         "--onefile",
-        "mytool/cli.py"
+        "track_osc/cli.py",
+        "-n",
+        "track-osc"
     ])

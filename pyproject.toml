@@ -1,8 +1,8 @@
 [tool.poetry]
-name = "mytool"
+name = "track-osc"
 version = "0.1.0"
-description = "A simple command-line tool named mytool."
-authors = ["Your Name <your.email@example.com>"]
+description = "A simple command-line tool to detect objects and relay information via OSC."
+authors = ["Miguel Negrão <miguel.negrao@ipleiria.pt>"]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.14"
@@ -13,8 +13,8 @@ python-osc = "^1.9.0"
 lap = "^0.5.12"
 
 [tool.poetry.scripts]
-mytool = "mytool.cli:main"
-build-exe = "mytool.build_exe:main"
+track-osc = "track_osc.cli:main"
+build-exe = "track_osc.build_exe:main"
 
 [tool.poetry.group.dev.dependencies]
 pyinstaller = "^6.11.0"
