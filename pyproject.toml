@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "mytool"
+version = "0.1.0"
+description = "A simple command-line tool named mytool."
+authors = ["Your Name <your.email@example.com>"]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.14"
+#new libraries can be added with poetry add <name of library>
+opencv-python = "^4.10.0.84"
+ultralytics = "^8.3.40"
+python-osc = "^1.9.0"
+lap = "^0.5.12"
+
+[tool.poetry.scripts]
+mytool = "mytool.cli:main"
+build-exe = "mytool.build_exe:main"
+
+[tool.poetry.group.dev.dependencies]
+pyinstaller = "^6.11.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
