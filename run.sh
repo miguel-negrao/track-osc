@@ -1,1 +1,1 @@
-poetry run track-osc
+uv run track-osc
