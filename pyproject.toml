@@ -14,6 +14,7 @@ dependencies = [
 [project.scripts]
 track-osc = "track_osc.cli:main"
 build-exe = "track_osc.build_exe:main"
+osc-test-client = "track_osc.osc_test_client:main"
 
 [project.optional-dependencies]
 dev = ["pyinstaller>=6.11.0,<7.0.0"]
