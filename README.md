@@ -37,6 +37,24 @@ uv run --extra dev build-exe
 
 The executable will be `dist/track-osc` or `dist/track-osc.exe`
 
+## Test tool (OSC client)
+
+There is a simple OSC test client that simulates one object moving in a square.
+
+Run it with:
+
+```
+uv run osc-test-client --ip 127.0.0.1 --port 8000 --id 1 --period 6 --fps 30
+```
+
+Arguments:
+
+- `--ip`: OSC server IP (default `127.0.0.1`)
+- `--port`: OSC server port (default `8000`)
+- `--id`: Object id (default `1`)
+- `--period`: Seconds to complete the square before deletion (default `6`)
+- `--fps`: Updates per second (default `30`)
+
 ## vscode
 
 To select the virtualenv created by uv in vscode click on the virtualenv selection dropdown at the bottom of the edit window and select the entry which has ".venv" on the right.
